@@ -10,13 +10,13 @@ from slugify import slugify
 router = APIRouter(prefix="/user", tags=["user"])
 
 
-@router.get("/")
+@router.get("/", response_model=List[User])
 async def all_users(db: Annotated[Session, Depends(get_db)]) -> List[User]:
     users = db.execute(select(User)).scalars().all()
     return users
 
 
-@router.get("/{user_id}")
+@router.get("/user_id", response_model=User)
 async def user_by_id(user_id: int, db: Annotated[Session, Depends(get_db)]) -> User:
     user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if user is None:
@@ -24,7 +24,7 @@ async def user_by_id(user_id: int, db: Annotated[Session, Depends(get_db)]) -> U
     return user
 
 
-@router.post("/create")
+@router.post("/create", response_model=User)
 async def create_user(user: CreateUser, db: Annotated[Session, Depends(get_db)]) -> dict:
     db_user = User(user.dict(), slug=slugify(user.username))
     db.execute(insert(User).values(db_user.__dict__))
@@ -32,7 +32,7 @@ async def create_user(user: CreateUser, db: Annotated[Session, Depends(get_db)])
     return {'status_code': status.HTTP_201_CREATED, 'transaction': 'Successful'}
 
 
-@router.put("/update/{user_id}")
+@router.put("/update", response_model=User)
 async def update_user(user_id: int, user: UpdateUser, db: Annotated[Session, Depends(get_db)]) -> dict:
     db_user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if db_user is None:
@@ -44,7 +44,7 @@ async def update_user(user_id: int, user: UpdateUser, db: Annotated[Session, Dep
     return {'status_code': status.HTTP_200_OK, 'transaction': 'User update is successful!'}
 
 
-@router.delete("/delete/{user_id}")
+@router.delete("/delete", response_model=User)
 async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]) -> dict:
     db_user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if db_user is None:
