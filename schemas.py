@@ -1,5 +1,16 @@
 from pydantic import BaseModel
 
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    firstname: str
+    lastname: str
+    age: int
+    slug: str
+
+    class Config:
+        orm_mode = True
+
 class CreateUser(BaseModel):
     username: str
     firstname: str

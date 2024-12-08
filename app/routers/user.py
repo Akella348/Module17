@@ -1,56 +1,57 @@
+from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
-from app.backend.db_depends import get_db
-from typing import Annotated, List
-from app.models.user import User
-from schemas import CreateUser, UpdateUser
 from sqlalchemy import insert, select, update, delete
 from slugify import slugify
+from app.models.user import User
+from app.backend.db_depends import get_db
+from schemas import CreateUser, UpdateUser, UserResponse
 
 router = APIRouter(prefix="/user", tags=["user"])
 
-
-@router.get("/", response_model=List[User])
-async def all_users(db: Annotated[Session, Depends(get_db)]) -> List[User]:
+@router.get("/", response_model=List[UserResponse])
+async def all_users(db: Session = Depends(get_db)) -> List[UserResponse]:
     users = db.execute(select(User)).scalars().all()
     return users
 
-
-@router.get("/user_id", response_model=User)
-async def user_by_id(user_id: int, db: Annotated[Session, Depends(get_db)]) -> User:
+@router.get("/{user_id}", response_model=UserResponse)
+async def user_by_id(user_id: int, db: Session = Depends(get_db)) -> UserResponse:
     user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User was not found")
     return user
 
-
-@router.post("/create", response_model=User)
-async def create_user(user: CreateUser, db: Annotated[Session, Depends(get_db)]) -> dict:
-    db_user = User(user.dict(), slug=slugify(user.username))
-    db.execute(insert(User).values(db_user.__dict__))
+@router.post("/create", response_model=UserResponse)
+async def create_user(user: CreateUser, db: Session = Depends(get_db)) -> UserResponse:
+    db_user = User(
+        username=user.username,
+        firstname=user.firstname,
+        lastname=user.lastname,
+        age=user.age,
+        slug=slugify(user.username)
+    )
+    db.add(db_user)
     db.commit()
-    return {'status_code': status.HTTP_201_CREATED, 'transaction': 'Successful'}
+    db.refresh(db_user)
+    return db_user
 
-
-@router.put("/update", response_model=User)
-async def update_user(user_id: int, user: UpdateUser, db: Annotated[Session, Depends(get_db)]) -> dict:
+@router.put("/{user_id}/update", response_model=UserResponse)
+async def update_user(user_id: int, user: UpdateUser, db: Session = Depends(get_db)) -> UserResponse:
     db_user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
-    update_query = update(User).where(User.id == user_id).values(user.dict())
+    update_query = update(User).where(User.id == user_id).values(**user.dict())
     db.execute(update_query)
     db.commit()
-    return {'status_code': status.HTTP_200_OK, 'transaction': 'User update is successful!'}
+    return db_user
 
-
-@router.delete("/delete", response_model=User)
-async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]) -> dict:
+@router.delete("/{user_id}", response_model=dict)
+async def delete_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     db_user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
-    delete_query = delete(User).where(User.id == user_id)
-    db.execute(delete_query)
+    db.execute(delete(User).where(User.id == user_id))
     db.commit()
     return {'status_code': status.HTTP_200_OK, 'transaction': 'User deletion is successful!'}
