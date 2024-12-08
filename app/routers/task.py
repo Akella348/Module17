@@ -1,12 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import insert, select, update, delete
+from sqlalchemy import select, update, delete
 from slugify import slugify
 from app.models.user import User
 from app.models.task import Task
 from app.backend.db_depends import get_db
-from schemas import CreateTask, UpdateTask, TaskResponse
+from app.schemas import CreateTask, UpdateTask, TaskResponse
 
 router = APIRouter(prefix="/task", tags=["task"])
 
