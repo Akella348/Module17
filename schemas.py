@@ -11,6 +11,18 @@ class UserResponse(BaseModel):
     class Config:
         orm_mode = True
 
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    content: str
+    priority: int
+    completed: bool
+    user_id: int
+    slug: str
+
+    class Config:
+        orm_mode = True
+
 class CreateUser(BaseModel):
     username: str
     firstname: str

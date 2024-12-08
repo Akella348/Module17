@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import insert, select, update, delete
 from slugify import slugify
 from app.models.user import User
+from app.models.task import Task
 from app.backend.db_depends import get_db
-from schemas import CreateUser, UpdateUser, UserResponse
+from schemas import CreateUser, UpdateUser, UserResponse, TaskResponse
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -52,6 +53,14 @@ async def delete_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     if db_user is None:
         raise HTTPException(status_code=404, detail="User was not found")
 
+    db.execute(delete(Task).where(Task.user_id == user_id))
     db.execute(delete(User).where(User.id == user_id))
     db.commit()
-    return {'status_code': status.HTTP_200_OK, 'transaction': 'User deletion is successful!'}
+    return {'status_code': status.HTTP_200_OK, 'transaction': 'User and associated tasks deleted successful!'}
+
+@router.get("/{user_id}/tasks", response_model=List[TaskResponse])
+async def tasks_by_user_id(user_id: int, db: Session = Depends(get_db)) -> List[TaskResponse]:
+    tasks = db.execute(select(Task).where(Task.user_id == user_id)).scalars().all()
+    if not tasks:
+        raise HTTPException(status_code=404, detail="No tasks found for this user")
+    return tasks
